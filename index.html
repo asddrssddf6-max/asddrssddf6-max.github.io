@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Accounting Equation Table — Export & Copy</title>
+  <title>Accounting Table Builder — Export & Copy</title>
   <style>
     body{font-family:Arial,Helvetica,sans-serif;background:#f8fafc;color:#1e293b;margin:0;padding:20px}
     .wrap{max-width:1200px;margin:0 auto}
@@ -12,8 +12,10 @@
     th,td{border:1px solid #cbd5e1;padding:8px}
     th{background:#e2e8f0}
     td[contenteditable]{background:#f1f5f9}
-    .controls{margin-top:10px;display:flex;justify-content:flex-end;gap:8px}
-    button{padding:8px 12px;border:none;border-radius:6px;cursor:pointer;background:#3b82f6;color:#fff}
+    .controls{margin-top:10px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+    select,button{padding:8px 12px;border:none;border-radius:6px}
+    select{border:1px solid #cbd5e1;background:#fff;cursor:pointer}
+    button{cursor:pointer;background:#3b82f6;color:#fff}
     button:hover{background:#2563eb}
     textarea{width:100%;min-height:160px;margin-top:15px;padding:10px;border:1px solid #cbd5e1;border-radius:6px;font-family:monospace}
     .toast{position:fixed;bottom:20px;right:20px;background:#0f172a;color:#fff;padding:10px 15px;border-radius:6px;display:none}
@@ -21,64 +23,106 @@
 </head>
 <body>
   <div class="wrap">
-    <h1>Accounting Equation Table</h1>
+    <h1>Accounting Table Builder</h1>
 
     <div class="controls">
-      <select id="format">
-        <option value="csv">CSV</option>
-        <option value="tsv">TSV</option>
-        <option value="json">JSON</option>
-        <option value="md">Markdown</option>
-      </select>
-      <button id="addRow">➕ Row</button>
-      <button id="export">Export & Copy</button>
+      <div>
+        <label for="tableType"><strong>Table:</strong></label>
+        <select id="tableType">
+          <option value="equation">Accounting Equation</option>
+          <option value="journal">Journal</option>
+          <option value="ledger">Ledger</option>
+          <option value="trial">Trial Balance</option>
+          <option value="balance">Balance Sheet</option>
+        </select>
+      </div>
+      <div>
+        <select id="format">
+          <option value="csv">CSV</option>
+          <option value="tsv">TSV</option>
+          <option value="json">JSON</option>
+          <option value="md">Markdown</option>
+        </select>
+        <button id="addRow">➕ Row</button>
+        <button id="export">Export & Copy</button>
+      </div>
     </div>
 
-    <table id="dataTable">
-      <thead>
-        <tr>
-          <th rowspan="2">Date</th>
-          <th colspan="4">Asset</th>
-          <th colspan="1">= Liabilities</th>
-          <th colspan="4">+ Owner's Equity</th>
-          <th rowspan="2">Actions</th>
-        </tr>
-        <tr>
-          <th>Cash +</th>
-          <th>Account Receivable +</th>
-          <th>Supplies +</th>
-          <th>Equipment +</th>
-          <th>Account Payable +</th>
-          <th>Capital +</th>
-          <th>Drawings −</th>
-          <th>Revenues +</th>
-          <th>Expenses −</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td contenteditable="true">2025-10-16</td>
-          <td contenteditable="true"></td>
-          <td contenteditable="true"></td>
-          <td contenteditable="true"></td>
-          <td contenteditable="true"></td>
-          <td contenteditable="true"></td>
-          <td contenteditable="true"></td>
-          <td contenteditable="true"></td>
-          <td contenteditable="true"></td>
-          <td contenteditable="true"></td>
-          <td><button class="del">🗑️</button></td>
-        </tr>
-      </tbody>
-    </table>
-
+    <table id="dataTable"></table>
     <textarea id="previewArea" readonly placeholder="Exported data will appear here..."></textarea>
   </div>
 
   <div id="toast" class="toast"></div>
 
   <script>
-    const $ = id => document.getElementById(id)
+    const $ = id => document.getElementById(id);
+
+    const tableConfigs = {
+      equation: {
+        headerTop: ['Date', 'Asset', '', '', '', 'Liabilities', "Owner's Equity", '', '', ''],
+        headerBottom: ['Date','Cash +','Account Receivable +','Supplies +','Equipment +','Account Payable +','Capital +','Drawings −','Revenues +','Expenses −']
+      },
+      journal: {
+        headerBottom: ['Date','Particulars','Debit (Tk)','Credit (Tk)']
+      },
+      ledger: {
+        headerBottom: ['Account Name','Debit (Tk)','Credit (Tk)','Balance']
+      },
+      trial: {
+        headerBottom: ['Account Title','Debit (Tk)','Credit (Tk)']
+      },
+      balance: {
+        headerBottom: ['Particulars','Liabilities (Tk)','Assets (Tk)']
+      }
+    };
+
+    function buildTable(type){
+      const table = $('dataTable');
+      table.innerHTML = '';
+      const config = tableConfigs[type];
+      const thead = document.createElement('thead');
+      const tbody = document.createElement('tbody');
+
+      if(config.headerTop){
+        const trTop = document.createElement('tr');
+        config.headerTop.forEach((txt,i)=>{
+          const th=document.createElement('th');
+          th.textContent=txt;
+          if(i===0) th.rowSpan=2;
+          if(i>0 && i<5) th.colSpan=1;
+          if(i===1) th.colSpan=4;
+          if(i===5) th.colSpan=1;
+          if(i===6) th.colSpan=4;
+          trTop.appendChild(th);
+        });
+        thead.appendChild(trTop);
+      }
+
+      const trBottom = document.createElement('tr');
+      config.headerBottom.forEach(txt=>{
+        const th=document.createElement('th');
+        th.textContent=txt;
+        trBottom.appendChild(th);
+      });
+      const thAction=document.createElement('th');
+      thAction.textContent='Actions';
+      trBottom.appendChild(thAction);
+      thead.appendChild(trBottom);
+
+      const tr=document.createElement('tr');
+      config.headerBottom.forEach(()=> {
+        const td=document.createElement('td');
+        td.contentEditable='true';
+        tr.appendChild(td);
+      });
+      const tdAction=document.createElement('td');
+      tdAction.innerHTML='<button class="del">🗑️</button>';
+      tr.appendChild(tdAction);
+      tbody.appendChild(tr);
+
+      table.appendChild(thead);
+      table.appendChild(tbody);
+    }
 
     function showToast(msg){
       const el = $('toast');
@@ -88,91 +132,87 @@
     }
 
     function readTable(){
-      const headers = Array.from(document.querySelectorAll('#dataTable thead tr:last-child th')).map(th=>th.innerText.trim())
-      headers.unshift('Date')
+      const headers = Array.from(document.querySelectorAll('#dataTable thead tr:last-child th')).map(th=>th.innerText.trim());
       const rows = Array.from(document.querySelectorAll('#dataTable tbody tr')).map(tr=>{
-        return Array.from(tr.querySelectorAll('td')).slice(0, headers.length).map(td=>td.innerText.trim())
-      })
-      return {headers,rows}
+        return Array.from(tr.querySelectorAll('td')).slice(0, headers.length).map(td=>td.innerText.trim());
+      });
+      return {headers,rows};
     }
 
-    function toCSV(headers,rows,delim=','){
-      const esc = v => '"'+String(v).replace(/"/g,'""')+'"'
-      const lines = [headers.map(esc).join(delim)]
-      for(const r of rows){lines.push(r.map(esc).join(delim))}
-      return lines.join('\n')
+    function toCSV(h,r,delim=','){
+      const esc = v => '"'+String(v).replace(/"/g,'""')+'"';
+      const lines = [h.map(esc).join(delim)];
+      for(const row of r){lines.push(row.map(esc).join(delim));}
+      return lines.join('\n');
     }
-
-    function toTSV(h,r){return toCSV(h,r,'\t')}
-
-    function toJSON(h,r){
-      return JSON.stringify(r.map(row=>{
-        const obj={}; h.forEach((k,i)=>obj[k]=row[i]||''); return obj
-      }),null,2)
-    }
-
+    const toTSV = (h,r)=>toCSV(h,r,'\t');
+    const toJSON = (h,r)=>JSON.stringify(r.map(row=>{
+      const obj={}; h.forEach((k,i)=>obj[k]=row[i]||''); return obj;
+    }),null,2);
     function toMD(h,r){
-      const esc = s=>s.replace(/\|/g,'\\|')
-      const head = '| '+h.map(esc).join(' | ')+' |'
-      const sep = '| '+h.map(()=> '---').join(' | ')+' |'
-      const body = r.map(row=>'| '+row.map(esc).join(' | ')+' |').join('\n')
-      return [head,sep,body].join('\n')
+      const esc=s=>s.replace(/\|/g,'\\|');
+      const head='| '+h.map(esc).join(' | ')+' |';
+      const sep='| '+h.map(()=> '---').join(' | ')+' |';
+      const body=r.map(row=>'| '+row.map(esc).join(' | ')+' |').join('\n');
+      return [head,sep,body].join('\n');
     }
 
     function updatePreview(){
-      const {headers,rows} = readTable()
-      const fmt = $('format').value
-      let out=''
-      if(fmt==='csv') out=toCSV(headers,rows)
-      else if(fmt==='tsv') out=toTSV(headers,rows)
-      else if(fmt==='json') out=toJSON(headers,rows)
-      else if(fmt==='md') out=toMD(headers,rows)
-      $('previewArea').value = out
-      return out
+      const {headers,rows}=readTable();
+      const fmt=$('format').value;
+      let out='';
+      if(fmt==='csv') out=toCSV(headers,rows);
+      else if(fmt==='tsv') out=toTSV(headers,rows);
+      else if(fmt==='json') out=toJSON(headers,rows);
+      else if(fmt==='md') out=toMD(headers,rows);
+      $('previewArea').value=out;
+      return out;
     }
 
     $('addRow').addEventListener('click',()=>{
-      const tbody = document.querySelector('#dataTable tbody')
-      const headerCount = document.querySelectorAll('#dataTable thead tr:last-child th').length+1
-      const tr=document.createElement('tr')
+      const tbody=document.querySelector('#dataTable tbody');
+      const headerCount=document.querySelectorAll('#dataTable thead tr:last-child th').length;
+      const tr=document.createElement('tr');
       for(let i=0;i<headerCount;i++){
-        const td=document.createElement('td')
-        td.contentEditable='true'
-        tr.appendChild(td)
+        const td=document.createElement('td');
+        td.contentEditable='true';
+        tr.appendChild(td);
       }
-      const action=document.createElement('td')
-      action.innerHTML='<button class="del">🗑️</button>'
-      tr.appendChild(action)
-      tbody.appendChild(tr)
-    })
+      const action=document.createElement('td');
+      action.innerHTML='<button class="del">🗑️</button>';
+      tr.appendChild(action);
+      tbody.appendChild(tr);
+    });
 
     document.querySelector('#dataTable').addEventListener('click',e=>{
       if(e.target.matches('.del')){
-        e.target.closest('tr').remove()
-        updatePreview()
+        e.target.closest('tr').remove();
+        updatePreview();
       }
-    })
+    });
 
-    document.querySelector('#dataTable').addEventListener('input',updatePreview)
-    $('format').addEventListener('change',updatePreview)
+    document.querySelector('#dataTable').addEventListener('input',updatePreview);
+    $('format').addEventListener('change',updatePreview);
+    $('tableType').addEventListener('change',()=>{buildTable($('tableType').value);updatePreview();});
 
     $('export').addEventListener('click',async()=>{
-      const text=updatePreview()
+      const text=updatePreview();
       try{
-        await navigator.clipboard.writeText(text)
-        showToast('Copied to clipboard ✓')
+        await navigator.clipboard.writeText(text);
+        showToast('Copied to clipboard ✓');
       }catch{
-        const ta=document.createElement('textarea')
-        ta.value=text
-        document.body.appendChild(ta)
-        ta.select()
-        document.execCommand('copy')
-        ta.remove()
-        showToast('Copied (fallback)')
+        const ta=document.createElement('textarea');
+        ta.value=text;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        ta.remove();
+        showToast('Copied (fallback)');
       }
-    })
+    });
 
-    updatePreview()
+    buildTable('equation');
+    updatePreview();
   </script>
 </body>
 </html>
